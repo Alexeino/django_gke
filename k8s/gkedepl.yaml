@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: mycontainer
-        image: alexeino/django_gke:0.1
+        image: alexeino/django_gke:0.2
         ports:
         - containerPort: 8000
         envFrom:

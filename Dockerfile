@@ -23,8 +23,8 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 # For local
-CMD [ "python","/app/manage.py","runserver","0.0.0.0:8000" ]
+# CMD [ "python","/app/manage.py","runserver","0.0.0.0:8000" ]
 
 # For Prod to use Gunicorn
-# CMD [ "gunicorn","--config","/app/gunicorn_config.py","devapi.wsgi:application" ] 
-# CMD [ "gunicorn","devapi.wsgi:application","-b","0.0.0.0:8000" ]
+CMD [ "gunicorn","--config","/app/gunicorn_config.py","django_gke.wsgi:application" ] 
+# CMD [ "gunicorn","django_gke.wsgi:application","-b","0.0.0.0:8000" ]
