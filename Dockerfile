@@ -4,10 +4,18 @@ FROM python:3.10-alpine as builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 
-RUN apk add --update 
+RUN apk add --update
 
 COPY requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
+
+RUN apk add --virtual .build-deps \
+    postgresql-dev \
+    libpq \ 
+    gcc \
+    python3-dev \
+    libpq-dev \
+    && pip install -r /app/requirements.txt \
+    && apk --purge del .build-deps
 
 # Main Image Build
 

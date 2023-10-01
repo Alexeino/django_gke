@@ -14,10 +14,31 @@ spec:
     spec:
       containers:
       - name: mycontainer
-        image: alexeino/django_gke:0.2
+        image: alexeino/django_gke:0.4
         ports:
         - containerPort: 8000
         envFrom:
           - secretRef:
               name: gkesecret
-              
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.16
+        command: ["/cloud_sql_proxy", "--dir=/cloudsql",
+                  "-instances=expanded-agent-399403:us-central1:djangogke-cloudsql=tcp:5432",
+                  "-credential_file=/secrets/cloudsql/credentials.json"]
+        volumeMounts:
+          - name: cloudsql-oauth-credentials
+            mountPath: /secrets/cloudsql
+            readOnly: true
+          - name: ssl-certs
+            mountPath: /etc/ssl/certs
+          - name: cloudsql
+            mountPath: /cloudsql
+      volumes:
+        - name: cloudsql-oauth-credentials
+          secret:
+            secretName: cloudsql-oauth-credentials
+        - name: ssl-certs
+          hostPath:
+            path: /etc/ssl/certs
+        - name: cloudsql
+          emptyDir: {}
