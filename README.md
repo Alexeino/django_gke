@@ -1,6 +1,6 @@
 # Django App Deployment on GKE Cluster
 
-<mark> &nbsp; Branch &nbsp; </mark> &rarr; &nbsp; **gke_integration_03**
+<mark> &nbsp; Branch &nbsp; </mark> &rarr; &nbsp; **gke_integration_04**
 -   
 
 <mark> &nbsp; Features &nbsp; </mark> 
@@ -9,8 +9,10 @@
 -   Use a side car cloud-sql container to connect to cloudSQL instance on Gcloud.
 -   Ready to Run Yaml configs
 -   Gunicorn is used as worker for django app
+-   Added Migration Job to Make migrations to CloudSQL Database created perviously
+-   When running app locally, Set DEBUG=True in env to run app locally with db.sqlite3 for dev
 
-<mark> &nbsp; Docker Image &nbsp; </mark> &rarr; alexeino/django_gke:0.4
+<mark> &nbsp; Docker Image &nbsp; </mark> &rarr; alexeino/django_gke:0.4.2
 -
 
 <mark> &nbsp; To Run App over GKE Cluster &nbsp; </mark>
@@ -56,6 +58,40 @@ kubectl create secret generic cloudsql-oauth-credentials \
 
 #### You should have your Django App running over GKE. Login to mycontainer on the pod and try running *makemigrations* and *migrate* to check if App is successfully connected to CloudSQL Instance.
 #### Try accessing your app on service Load Balancer IP.
+
+## Running Migrations 
+A migration-job is created as a kubernetes resource.
+-   Yaml File => <mark>&nbsp; migrate-job.yaml &nbsp; </mark>  
+  
+<mark> Explaining migrate-job.yaml </mark>  
+    -   This manifest creates a CRON Job in which it spins up two containers in one Pod. One is for cloudsql connection and other is to run migration command.
+    -   The main migrate-container, executes the script specified  
+    ```python /app/manage.py migrate;  
+    ```  
+    ```sql_proxy_pid=$(pgrep cloud_sql_proxy) && kill -INT $sql_proxy_pid;
+    ```  
+    -   First command runs the migration.
+    -   Second command kills the cloud-sql connection so that complete pod can be shutdown and deleted by ttl-controller after job is completed.  
+    -   ```ttlSecondsAfterFinished: 100``` kills the pod created for migrate-job automatically after 100 seconds of job completion  
+    -   For pod to be terminated by ttl-controller, no process should be running, for which we use second command.
+    
+    
+### Steps to Run Migrations over Cluster
+-   Add Models and everything and run ```python manage.py makemigrations``` locally.
+-   Verify migrations by running ```python manage.py migrate``` with DEBUG=True so that migrations apply to db.sqlite3 locally.
+-   Once Verified, Make a new docker image out of new updated code, simply run  
+    ```docker build -t <docker_username>/<image_name>:<image_tag> .```  
+    inside root repo where Dockerfile resides.
+-   Once Image built, push it to hub.docker.com using  
+    ```docker push <docker_username>/<image_name>:<image_tag>```
+-   Once Image Pushed, Replace old image name from  
+    -   gkedepl.yaml (line 17)
+    -   migrate-job.yaml (line 12)
+
+-   Apply all yaml manifests at once  
+    ```kubectl apply -f k8s/```
+
+
 
 ### Important Commands
 -   To Authenticate or login to gcloud through terminal  

@@ -1,22 +1,20 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: mydeployment
+  name: migrate-job
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: myapp
+  ttlSecondsAfterFinished: 100
+  parallelism: 1
   template:
-    metadata:
-      labels:
-        app: myapp
     spec:
       containers:
-      - name: mycontainer
+      - name: migrate-container
         image: alexeino/django_gke:0.4.2
-        ports:
-        - containerPort: 8000
+        command: ["/bin/sh","-c"]
+        args:
+          - |
+            python /app/manage.py migrate;
+            sql_proxy_pid=$(pgrep cloud_sql_proxy) && kill -INT $sql_proxy_pid;
         envFrom:
           - secretRef:
               name: gkesecret
@@ -42,3 +40,6 @@ spec:
             path: /etc/ssl/certs
         - name: cloudsql
           emptyDir: {}
+      restartPolicy: Never
+      shareProcessNamespace: true
+  backoffLimit: 4
